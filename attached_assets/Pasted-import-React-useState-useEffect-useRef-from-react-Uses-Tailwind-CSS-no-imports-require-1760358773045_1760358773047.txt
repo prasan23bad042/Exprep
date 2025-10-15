@@ -1,0 +1,129 @@
+import React, { useState, useEffect, useRef } from 'react'
+// Uses Tailwind CSS (no imports required here). lucide-react icons available if needed.
+
+export default function ExamAssistUI() {
+  const COURSES = [
+    { id: 'schooling', title: 'Schooling (9th & 10th TN)', subtitle: 'Tamil Nadu Syllabus' },
+    { id: 'engineering', title: 'Engineering (CSE)', subtitle: 'COA, OS' },
+    { id: 'govt', title: 'Govt Exams (SSC CGL)', subtitle: 'SSC Exam Prep' },
+  ]
+
+  const [user, setUser] = useState({ name: 'Guest', loggedIn: false })
+  const [selectedCourse, setSelectedCourse] = useState(COURSES[0])
+  const [level, setLevel] = useState(null)
+  const [chat, setChat] = useState([])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const chatEndRef = useRef(null)
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [chat])
+
+  async function handleSend() {
+    if (!input.trim()) return
+    const userMsg = { role: 'user', text: input, ts: Date.now() }
+    setChat((c) => [...c, userMsg])
+    setInput('')
+    setIsLoading(true)
+
+    try {
+      // Call your API that queries RAG + LLM
+      const payload = {
+        userId: user.id || 'anon',
+        course: selectedCourse.id,
+        level: level,
+        query: userMsg.text,
+      }
+      const res = await fetch('/api/rag/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      const botMsg = { role: 'assistant', text: data.answer || 'Sorry, no answer.', meta: data.sources || [], ts: Date.now() }
+      setChat((c) => [...c, botMsg])
+    } catch (e) {
+      setChat((c) => [...c, { role: 'assistant', text: 'Error: could not reach server.' }])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  function CourseCard({ course, active, onClick }) {
+    return (
+      <button onClick={onClick} className={`w-full text-left p-4 rounded-2xl transition-shadow ${active ? 'shadow-2xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white' : 'bg-white/5 hover:bg-white/3'}`}>
+        <div className="text-sm font-semibold">{course.title}</div>
+        <div className="text-xs opacity-80">{course.subtitle}</div>
+      </button>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0f1724] text-slate-100 p-6">
+      <div className="max-w-6xl mx-auto grid grid-cols-12 gap-6">
+        {/* Left sidebar */}
+        <aside className="col-span-3 p-4 rounded-3xl bg-gradient-to-b from-white/3 to-white/2">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">{user.name?.[0] || 'G'}</div>
+            <div>
+              <div className="text-sm">{user.name}</div>
+              <div className="text-xs opacity-80">{user.loggedIn ? 'Signed in' : 'Guest'}</div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {COURSES.map((c) => (
+              <CourseCard key={c.id} course={c} active={c.id === selectedCourse.id} onClick={() => { setSelectedCourse(c); setLevel(null); }} />
+            ))}
+          </div>
+
+          <div className="mt-6 border-t border-white/5 pt-4 text-xs opacity-90">
+            <div className="mb-2">Choose level</div>
+            <div className="flex gap-2">
+              {['Beginner', 'Intermediate', 'Expert'].map((l) => (
+                <button key={l} onClick={() => setLevel(l)} className={`px-3 py-1 rounded-full text-sm ${level === l ? 'bg-white/10' : 'bg-white/2 hover:bg-white/4'}`}>{l}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 text-xs opacity-80">
+            <div className="mb-2">Quick actions</div>
+            <button className="w-full py-2 rounded-xl bg-white/5">Study Plan</button>
+            <button className="w-full py-2 rounded-xl bg-white/5 mt-2">Assessments</button>
+          </div>
+        </aside>
+
+        {/* Main chat */}
+        <main className="col-span-9 bg-gradient-to-b from-slate-900/40 to-slate-900/20 rounded-3xl p-6 flex flex-col">
+          <header className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-lg font-semibold">{selectedCourse.title}</div>
+              <div className="text-xs opacity-80">{selectedCourse.subtitle} • {level || 'Select level'}</div>
+            </div>
+            <div className="text-xs opacity-60">Session: {new Date().toLocaleString()}</div>
+          </header>
+
+          <div className="flex-1 overflow-auto mb-4 p-3 bg-slate-800/30 rounded-2xl">
+            {chat.length === 0 && <div className="text-center opacity-60 py-20">Start by asking a question — e.g. “Explain pointers in OS” or “Give me a 2-week study plan for SSC CGL (Beginner)”.</div>}
+
+            <div className="space-y-4">
+              {chat.map((m, i) => (
+                <div key={i} className={`${m.role === 'user' ? 'text-right' : 'text-left'}`}>
+                  <div className={`inline-block max-w-[70%] p-3 rounded-2xl ${m.role === 'user' ? 'bg-indigo-600/80' : 'bg-white/6'}`}>{m.text}</div>
+                  {m.meta && m.meta.length > 0 && (
+                    <div className="text-[11px] opacity-60 mt-1">Sources: {m.meta.map(s=>s.source? s.source.split('/').slice(-1)[0] : s.id).join(', ')}</div>
+                  )}
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <input value={input} onChange={(e)=>setInput(e.target.value)} onKeyDown={(e)=>{ if(e.key==='Enter') handleSend() }} placeholder={level? 'Ask anything about the topic...' : 'Choose a level to begin...'} disabled={!level} className="flex-1 py-3 px-4 rounded-2xl bg-slate-800/40 outline-none" />
+            <button onClick={handleSend} disabled={!level || isLoading} className="px-4 py-2 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500">{isLoading ? 'Thinking...' : 'Send'}</button>
+          </div>
+        </main>
+      </div>
+    </div>
+  )
+}
