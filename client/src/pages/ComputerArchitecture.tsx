@@ -3,157 +3,57 @@ import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-const units = [
-  {
-    title: '1. Introduction & Basic Concepts',
-    topics: [
-      'Function and structure of a computer system',
-      'Instruction Set Architecture (ISA) — abstraction, role',
-      'Performance metrics (CPU time, throughput, MIPS, CPI)',
-      'Types of computers: RISC vs CISC',
-      'Addressing modes, instruction formats, instruction set',
-      'Register organization & operations'
-    ]
-  },
-  {
-    title: '2. Arithmetic & Logic Unit',
-    topics: [
-      'Number systems (signed, unsigned)',
-      'Fixed-point arithmetic: addition, subtraction',
-      'Multiplication algorithms (shift-add, Booth)',
-      'Division: restoring, non‑restoring',
-      'Floating point representation and operations (IEEE 754)',
-      'ALU design, combinational & sequential logic'
-    ]
-  },
-  {
-    title: '3. Processor Design & Control',
-    topics: [
-      'Datapath & control for single‑cycle CPU',
-      'Multi‑cycle CPU design',
-      'Hardwired control vs microprogrammed control',
-      'Microinstruction formats, control memory',
-      'Control unit implementation'
-    ]
-  },
-  {
-    title: '4. Pipelining & Instruction-level Parallelism',
-    topics: [
-      'Concepts of pipelining, pipeline hazards',
-      'Structural hazards, data hazards, control hazards',
-      'Hazard detection and resolution (stalling, forwarding)',
-      'Branch prediction (static, dynamic)',
-      'Superscalar, out-of-order execution (introduction)'
-    ]
-  },
-  {
-    title: '5. Memory System Organization',
-    topics: [
-      'Memory hierarchy & principles (locality, temporal & spatial)',
-      'Cache memory: mapping techniques, replacement, write policies',
-      'Virtual memory, page tables, TLBs',
-      'Main memory, secondary storage',
-      'Memory interleaving, memory organization, cache coherence'
-    ]
-  },
-  {
-    title: '6. Input/Output & Bus Systems',
-    topics: [
-      'I/O fundamentals: polling, interrupts, DMA',
-      'Bus structures, bus arbitration, protocols',
-      'Interfaces (e.g. PCI, USB, etc.)',
-      'I/O performance & buffering'
-    ]
-  },
-  {
-    title: '7. Parallelism & Advanced Topics',
-    topics: [
-      'Multiprocessor architectures — shared vs distributed memory',
-      'Interconnection networks, synchronization',
-      'Vector processors, SIMD, MIMD (overview)',
-      'GPU/TPU architecture',
-      'Emerging trends: multicore, heterogeneous systems'
-    ]
-  },
-  {
-    title: '8. Case Studies & Quantitative Analysis',
-    topics: [
-      'Evaluating tradeoffs (cost, performance, power)',
-      'Amdahl\'s Law',
-      'Case studies of real processors (ARM, MIPS, etc.)',
-      'Benchmarking, workload analysis'
-    ]
-  }
-];
+import { coaUnits } from '@/data/coaTopics';
 
 export default function ComputerArchitecture() {
-  const [expandedUnits, setExpandedUnits] = useState<Record<number, boolean>>({});
-  const [, setLocation] = useLocation();
+  const [expandedUnit, setExpandedUnit] = useState<number | null>(0); // Start with first unit expanded
+  const [location] = useLocation();
 
   const toggleUnit = (index: number) => {
-    setExpandedUnits(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
+    setExpandedUnit(expandedUnit === index ? null : index);
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Button 
-        variant="ghost" 
-        onClick={() => setLocation('/')}
-        className="mb-6"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Courses
-      </Button>
-
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Computer Organization & Architecture</h1>
-        <p className="text-muted-foreground">Comprehensive guide to computer architecture concepts and implementations</p>
+    <div className="container mx-auto p-4 md:p-8">
+      <div className="mb-6">
+        <Button asChild variant="ghost" className="mb-2">
+          <Link href="/">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Link>
+        </Button>
+        <h1 className="text-2xl md:text-3xl font-bold">Computer Organization & Architecture</h1>
       </div>
 
       <div className="space-y-4">
-        {units.map((unit, index) => (
-          <Card key={index} className="overflow-hidden">
-            <button 
-              className="w-full text-left"
-              onClick={() => toggleUnit(index)}
+        {coaUnits.map((unit, unitIndex) => (
+          <Card key={unit.id}>
+            <CardHeader 
+              className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg"
+              onClick={() => toggleUnit(unitIndex)}
             >
-              <CardHeader className="py-4 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{unit.title}</CardTitle>
-                  {expandedUnits[index] ? (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-              </CardHeader>
-            </button>
-            
-            {expandedUnits[index] && (
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg">{unit.title}</CardTitle>
+                {expandedUnit === unitIndex ? (
+                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                )}
+              </div>
+            </CardHeader>
+            {expandedUnit === unitIndex && (
               <CardContent className="pt-0">
-                <ul className="space-y-2 pl-6">
-                  {unit.topics.map((topic, topicIndex) => {
-                    // Create a URL-friendly ID for the topic
-                    const topicId = topic.toLowerCase()
-                      .replace(/[^\w\s-]/g, '') // Remove special characters
-                      .replace(/\s+/g, '-')     // Replace spaces with hyphens
-                      .replace(/-+/g, '-');      // Replace multiple hyphens with single
-                    
-                    return (
-                      <li key={topicIndex} className="text-muted-foreground hover:text-foreground transition-colors">
-                        <Link 
-                          href={`/computer-architecture/lessons/${index + 1}/${topicId}`}
-                          className="block py-1 hover:underline"
-                        >
-                          {topic}
-                        </Link>
-                      </li>
-                    );
-                  })}
+                <ul className="space-y-2">
+                  {unit.topics.map((topic) => (
+                    <li key={topic.id} className="text-muted-foreground hover:text-foreground transition-colors">
+                      <Link
+                        href={`/computer-architecture/lessons/${unit.id}/${topic.id}`}
+                        className="block py-1 hover:underline"
+                      >
+                        {topic.title}
+                      </Link>
+                    </li>
+                  ))}
                 </ul>
               </CardContent>
             )}

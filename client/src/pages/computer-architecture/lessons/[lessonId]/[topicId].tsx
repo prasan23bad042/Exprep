@@ -3,21 +3,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import TopicSidebar from '@/components/course/TopicSidebar';
-import { coaUnits, getTopicContent } from '@/data/coaTopics';
+import { coaUnits } from '@/data/coaTopics';
+
+interface TopicPageParams {
+  lessonId: string;
+  topicId: string;
+}
 
 export default function TopicPage() {
-  const params = useParams();
+  const params = useParams<TopicPageParams>();
   const { lessonId, topicId } = params;
 
   if (!lessonId || !topicId) {
-    return <div>Invalid URL parameters</div>;
+    return <div className="p-8">Invalid URL parameters</div>;
   }
 
   const unit = coaUnits.find(u => u.id === lessonId);
   const topic = unit?.topics.find(t => t.id === topicId);
-  const content = getTopicContent(lessonId, topicId);
 
-  if (!topic || !content) {
+  if (!topic) {
     return (
       <div className="container mx-auto p-8">
         <Button asChild variant="ghost" className="mb-6">
@@ -71,7 +75,7 @@ export default function TopicPage() {
               </CardHeader>
               <CardContent>
                 <div className="prose max-w-none">
-                  <p>{content.summary}</p>
+                  {/* Content will go here */}
                 </div>
               </CardContent>
             </Card>
@@ -83,12 +87,7 @@ export default function TopicPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {content.qa?.map((item, index) => (
-                    <div key={index} className="space-y-2">
-                      <h3 className="font-medium">Q: {item.question}</h3>
-                      <p className="text-muted-foreground">A: {item.answer}</p>
-                    </div>
-                  ))}
+                  {/* Q&A items will go here */}
                 </div>
               </CardContent>
             </Card>
