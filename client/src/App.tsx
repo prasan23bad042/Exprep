@@ -1,37 +1,65 @@
-import { Switch, Route, Redirect } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import ExamAssist from "@/pages/ExamAssist";
-import Login from "@/pages/Login";
-import Signup from "@/pages/Signup";
-import NotFound from "@/pages/not-found";
+import { useEffect, useState } from 'react';
+import { Switch, Route, Redirect, useLocation } from 'wouter';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/toaster';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { queryClient } from './lib/queryClient';
+import ExamAssist from '@/pages/ExamAssist';
+import Home from '@/pages/Home';
+import Login from '@/pages/Login';
+import Signup from '@/pages/Signup';
+import OperatingSystems from '@/pages/OperatingSystems';
+import ComputerArchitecture from '@/pages/ComputerArchitecture';
+import NinthStandard from '@/pages/NinthStandard';
+import TenthStandard from '@/pages/TenthStandard';
+import SSCPreparation from '@/pages/SSCPreparation';
+import NotFound from '@/pages/not-found';
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+// Simple wrapper to show loading state
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-muted-foreground">Loading...</div>
+    </div>
+  );
+}
+
+function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
+  const [location] = useLocation();
 
+  // Show loading screen while checking auth status
   if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  // If not authenticated, only allow access to login/signup pages
+  if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#0f1724] flex items-center justify-center">
-        <div className="text-slate-400">Loading...</div>
-      </div>
+      <Switch>
+        <Route path="/login" component={Login} />
+        <Route path="/signup" component={Signup} />
+        <Route>
+          <Redirect to="/login" />
+        </Route>
+      </Switch>
     );
   }
 
-  return isAuthenticated ? <Component /> : <Redirect to="/login" />;
-}
-
-function Router() {
+  // If authenticated, show protected routes
   return (
     <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/signup" component={Signup} />
-      <Route path="/">
-        {() => <ProtectedRoute component={ExamAssist} />}
+      <Route path="/" component={Home} />
+      <Route path="/chat" component={ExamAssist} />
+      <Route path="/operating-systems" component={OperatingSystems} />
+      <Route path="/computer-architecture" component={ComputerArchitecture} />
+      <Route path="/ninth-standard" component={NinthStandard} />
+      <Route path="/tenth-standard" component={TenthStandard} />
+      <Route path="/ssc-preparation" component={SSCPreparation} />
+      <Route>
+        <Redirect to="/" />
       </Route>
-      <Route component={NotFound} />
     </Switch>
   );
 }
@@ -42,7 +70,7 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <AppRouter />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

@@ -48,30 +48,29 @@ export default function Signup() {
     if (password.length < 8) {
       toast({
         title: 'Error',
-        description: 'Password must be at least 8 characters',
+        description: 'Password must be at least 8 characters long',
         variant: 'destructive',
       });
       return;
     }
 
     setIsLoading(true);
+
     try {
-      const response = await apiClient.register(username, password);
-      
-      // Update auth context (this also stores in localStorage)
-      login(response.user, response.accessToken);
+      const response = await apiClient.post('/auth/register', { username, password });
+      login(response.data.token);
       
       toast({
         title: 'Success',
         description: 'Account created successfully!',
       });
       
-      // Force page reload to ensure auth state is properly loaded
-      window.location.href = '/';
+      setLocation('/');
     } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Failed to create account';
       toast({
-        title: 'Signup Failed',
-        description: error instanceof Error ? error.message : 'Could not create account',
+        title: 'Registration Failed',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
