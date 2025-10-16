@@ -11,6 +11,7 @@ import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
 import OperatingSystems from '@/pages/OperatingSystems';
 import ComputerArchitecture from '@/pages/ComputerArchitecture';
+import TopicPage from '@/pages/computer-architecture/lessons/[lessonId]/[topicId]';
 import NinthStandard from '@/pages/NinthStandard';
 import TenthStandard from '@/pages/TenthStandard';
 import SSCPreparation from '@/pages/SSCPreparation';
@@ -54,6 +55,7 @@ function AppRouter() {
       <Route path="/chat" component={ExamAssist} />
       <Route path="/operating-systems" component={OperatingSystems} />
       <Route path="/computer-architecture" component={ComputerArchitecture} />
+      <Route path="/computer-architecture/lessons/:lessonId/:topicId" component={TopicPage} />
       <Route path="/ninth-standard" component={NinthStandard} />
       <Route path="/tenth-standard" component={TenthStandard} />
       <Route path="/ssc-preparation" component={SSCPreparation} />

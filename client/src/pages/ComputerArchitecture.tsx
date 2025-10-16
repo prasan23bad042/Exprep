@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -135,12 +135,25 @@ export default function ComputerArchitecture() {
             
             {expandedUnits[index] && (
               <CardContent className="pt-0">
-                <ul className="space-y-2 pl-6 list-disc">
-                  {unit.topics.map((topic, topicIndex) => (
-                    <li key={topicIndex} className="text-muted-foreground">
-                      {topic}
-                    </li>
-                  ))}
+                <ul className="space-y-2 pl-6">
+                  {unit.topics.map((topic, topicIndex) => {
+                    // Create a URL-friendly ID for the topic
+                    const topicId = topic.toLowerCase()
+                      .replace(/[^\w\s-]/g, '') // Remove special characters
+                      .replace(/\s+/g, '-')     // Replace spaces with hyphens
+                      .replace(/-+/g, '-');      // Replace multiple hyphens with single
+                    
+                    return (
+                      <li key={topicIndex} className="text-muted-foreground hover:text-foreground transition-colors">
+                        <Link 
+                          href={`/computer-architecture/lessons/${index + 1}/${topicId}`}
+                          className="block py-1 hover:underline"
+                        >
+                          {topic}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               </CardContent>
             )}
