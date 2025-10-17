@@ -47,21 +47,59 @@ export default function TopicPage() {
         <h1 className="text-2xl md:text-3xl font-bold">Computer Organization & Architecture</h1>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <style jsx global>{`
+        /* Hide scrollbar by default */
+        .sidebar-container {
+          height: calc(100vh - 240px);
+          overflow-y: auto;
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        
+        .sidebar-container::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Show scrollbar on hover */
+        .sidebar-container:hover::-webkit-scrollbar {
+          display: block;
+          width: 4px;
+        }
+        
+        .sidebar-container:hover::-webkit-scrollbar-thumb {
+          background: rgba(0, 0, 0, 0.1);
+          border-radius: 2px;
+        }
+        
+        /* Main content area */
+        .content-area {
+          overflow-y: auto;
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        
+        .content-area::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+
+      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-180px)]">
         {/* Sidebar */}
         <div className="lg:w-80 flex-shrink-0">
-          <div className="sticky top-24">
-            <TopicSidebar 
-              currentLessonId={lessonId} 
-              currentTopicId={topicId} 
-            />
+          <div className="sticky top-24 h-[calc(100vh-200px)]">
+            <div className="sidebar-container pr-2">
+              <TopicSidebar 
+                currentLessonId={lessonId} 
+                currentTopicId={topicId} 
+              />
+            </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1">
+        <div className="flex-1 content-area">
           <div className="space-y-6">
-            <div>
+            <div className="sticky top-0 bg-background/80 backdrop-blur-sm z-10 pt-4 pb-2">
               <h2 className="text-2xl font-bold">{topic.title}</h2>
               <div className="text-muted-foreground text-sm">
                 {unit?.title}
