@@ -2,23 +2,33 @@ import { useParams, Link } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
-import TopicSidebar from '@/components/course/TopicSidebar';
-import { coaUnits } from '@/data/coaTopics';
+import OsSidebar from '@/components/course/OsSidebar';
+import { osUnits } from '@/data/osTopics';
 
 interface TopicPageParams {
   lessonId: string;
   topicId: string;
 }
 
-export default function TopicPage() {
+export default function OsTopicPage() {
   const params = useParams<TopicPageParams>();
   const { lessonId, topicId } = params;
 
   if (!lessonId || !topicId) {
-    return <div className="p-8">Invalid URL parameters</div>;
+    return (
+      <div className="container mx-auto p-8">
+        <Button asChild variant="ghost" className="mb-6">
+          <Link href="/operating-systems">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Course
+          </Link>
+        </Button>
+        <div>Invalid URL parameters</div>
+      </div>
+    );
   }
 
-  const unit = coaUnits.find(u => u.id === lessonId);
+  const unit = osUnits.find(u => u.id === lessonId);
   const topic = unit?.topics.find(t => t.id === topicId);
   const topicIndex = unit?.topics.findIndex(t => t.id === topicId) ?? -1;
   
@@ -30,7 +40,7 @@ export default function TopicPage() {
     return (
       <div className="container mx-auto p-8">
         <Button asChild variant="ghost" className="mb-6">
-          <Link href="/computer-architecture">
+          <Link href="/operating-systems">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Course
           </Link>
@@ -63,16 +73,15 @@ This is a summary of ${topic.title}.`;
     <div className="container mx-auto p-4 md:p-8">
       <div className="mb-6">
         <Button asChild variant="ghost" className="mb-2">
-          <Link href="/computer-architecture">
+          <Link href="/operating-systems">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Course
           </Link>
         </Button>
-        <h1 className="text-2xl md:text-3xl font-bold">Computer Organization & Architecture</h1>
+        <h1 className="text-2xl md:text-3xl font-bold">Operating Systems</h1>
       </div>
 
       <style jsx global>{`
-        /* Hide scrollbar by default */
         .sidebar-container {
           height: calc(100vh - 240px);
           overflow-y: auto;
@@ -84,7 +93,6 @@ This is a summary of ${topic.title}.`;
           display: none;
         }
         
-        /* Show scrollbar on hover */
         .sidebar-container:hover::-webkit-scrollbar {
           display: block;
           width: 4px;
@@ -95,7 +103,6 @@ This is a summary of ${topic.title}.`;
           border-radius: 2px;
         }
         
-        /* Main content area */
         .content-area {
           overflow-y: auto;
           -ms-overflow-style: none;
@@ -112,7 +119,7 @@ This is a summary of ${topic.title}.`;
         <div className="lg:w-80 flex-shrink-0">
           <div className="sticky top-24 h-[calc(100vh-200px)]">
             <div className="sidebar-container pr-2">
-              <TopicSidebar currentLessonId={lessonId} currentTopicId={topicId} />
+              <OsSidebar currentLessonId={lessonId} currentTopicId={topicId} />
             </div>
           </div>
         </div>
@@ -122,9 +129,6 @@ This is a summary of ${topic.title}.`;
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">{topic.title}</CardTitle>
-              <div className="text-muted-foreground text-sm">
-                {unit?.title}
-              </div>
             </CardHeader>
             <CardContent>
               <div 
@@ -136,7 +140,7 @@ This is a summary of ${topic.title}.`;
               <div className="mt-8 pt-4 border-t flex justify-between">
                 {previousTopic ? (
                   <Button asChild variant="outline">
-                    <Link href={`/computer-architecture/lessons/${lessonId}/${previousTopic.id}`}>
+                    <Link href={`/operating-systems/lessons/${lessonId}/${previousTopic.id}`}>
                       <ChevronLeft className="mr-2 h-4 w-4" />
                       {previousTopic.title}
                     </Link>
@@ -145,14 +149,14 @@ This is a summary of ${topic.title}.`;
                 
                 {nextTopic ? (
                   <Button asChild>
-                    <Link href={`/computer-architecture/lessons/${lessonId}/${nextTopic.id}`}>
+                    <Link href={`/operating-systems/lessons/${lessonId}/${nextTopic.id}`}>
                       {nextTopic.title}
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                 ) : (
                   <Button asChild variant="outline">
-                    <Link href="/computer-architecture">
+                    <Link href="/operating-systems">
                       Back to Course
                     </Link>
                   </Button>
