@@ -56,6 +56,20 @@ export class ApiClient {
     });
   }
 
+  async get<T>(endpoint: string, headers: Record<string, string> = {}): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'GET',
+      headers
+    });
+  }
+
+  async delete<T>(endpoint: string, headers: Record<string, string> = {}): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+      headers
+    });
+  }
+
   // Auth endpoints
   async register(username: string, password: string) {
     return this.request<{
@@ -177,6 +191,81 @@ export class ApiClient {
       method: 'POST',
       body: { answers },
     });
+  }
+
+  // Friends endpoints (NEW)
+  async searchUsers(query: string, currentUserId: string) {
+    return this.request(`/friends/search/${query}?current_user_id=${currentUserId}`);
+  }
+
+  async sendFriendRequest(fromUserId: string, toUserId: string) {
+    return this.request('/friends/request', {
+      method: 'POST',
+      body: { fromUserId, toUserId }
+    });
+  }
+
+  async getFriendRequests(userId: string) {
+    return this.request(`/friends/requests/${userId}`);
+  }
+
+  async respondToFriendRequest(requestId: string, accept: boolean) {
+    return this.request('/friends/request/respond', {
+      method: 'POST',
+      body: { requestId, accept }
+    });
+  }
+
+  async getFriends(userId: string) {
+    return this.request(`/friends/${userId}`);
+  }
+
+  async removeFriend(userId: string, friendId: string) {
+    return this.request(`/friends/${userId}/${friendId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Study Session endpoints (NEW)
+  async createStudySession(payload: {
+    hostId: string;
+    course: string;
+    invitedFriends: string[];
+    sessionName?: string;
+  }) {
+    return this.request('/sessions/create', {
+      method: 'POST',
+      body: payload
+    });
+  }
+
+  async getSessionInvitations(userId: string) {
+    return this.request(`/sessions/invitations/${userId}`);
+  }
+
+  async joinStudySession(sessionId: string, userId: string) {
+    return this.request('/sessions/join', {
+      method: 'POST',
+      body: { sessionId, userId }
+    });
+  }
+
+  async leaveStudySession(sessionId: string, userId: string) {
+    return this.request(`/sessions/leave?session_id=${sessionId}&user_id=${userId}`, {
+      method: 'POST'
+    });
+  }
+
+  async getStudySession(sessionId: string) {
+    return this.request(`/sessions/${sessionId}`);
+  }
+
+  async getUserActiveSessions(userId: string) {
+    return this.request(`/sessions/user/${userId}/active`);
+  }
+
+  async getSessionMessages(sessionId: string, limit: number = 100) {
+    return this.request(`/sessions/${sessionId}/messages?limit=${limit}`);
   }
 
   // Health check

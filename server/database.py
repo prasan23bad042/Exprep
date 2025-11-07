@@ -55,6 +55,18 @@ class Database:
         # Document embeddings - for metadata filtering
         await self.db.document_embeddings.create_index([("course", 1), ("level", 1)])
         
+        # Friends (NEW)
+        await self.db.friends.create_index([("user1_id", 1), ("user2_id", 1)])
+        
+        # Friend requests (NEW)
+        await self.db.friend_requests.create_index([("to_user_id", 1), ("status", 1)])
+        
+        # Study sessions (NEW)
+        await self.db.study_sessions.create_index([("status", 1), ("participants.user_id", 1)])
+        
+        # Session messages (NEW)
+        await self.db.session_messages.create_index([("session_id", 1), ("timestamp", -1)])
+        
         print("✓ Database indexes created")
     
     # User operations
@@ -281,6 +293,368 @@ class Database:
             }
         )
         return result.modified_count > 0
+    
+    # FRIEND OPERATIONS (NEW)
+    
+    async def search_users(self, query: str, current_user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search users by username"""
+        cursor = self.db.users.find(
+            {
+                "username": {"$regex": query, "$options": "i"},
+                "_id": {"$ne": ObjectId(current_user_id)}  # Exclude current user
+            }
+        ).limit(limit)
+        return await cursor.to_list(length=limit)
+    
+    async def send_friend_request(self, from_user_id: str, to_user_id: str) -> Dict[str, Any]:
+        """Send friend request"""
+        # Check if already friends
+        existing_friendship = await self.db.friends.find_one({
+            "$or": [
+                {"user1_id": ObjectId(from_user_id), "user2_id": ObjectId(to_user_id)},
+                {"user1_id": ObjectId(to_user_id), "user2_id": ObjectId(from_user_id)}
+            ]
+        })
+        
+        if existing_friendship:
+            raise ValueError("Already friends")
+        
+        # Check for existing pending request
+        existing_request = await self.db.friend_requests.find_one({
+            "from_user_id": ObjectId(from_user_id),
+            "to_user_id": ObjectId(to_user_id),
+            "status": "pending"
+        })
+        
+        if existing_request:
+            raise ValueError("Friend request already sent")
+        
+        # Create request
+        request = {
+            "from_user_id": ObjectId(from_user_id),
+            "to_user_id": ObjectId(to_user_id),
+            "status": "pending",
+            "created_at": datetime.utcnow()
+        }
+        result = await self.db.friend_requests.insert_one(request)
+        request["_id"] = result.inserted_id
+        return request
+    
+    async def get_friend_requests(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get pending friend requests for user"""
+        cursor = self.db.friend_requests.find({
+            "to_user_id": ObjectId(user_id),
+            "status": "pending"
+        }).sort("created_at", -1)
+        
+        requests = await cursor.to_list(length=None)
+        
+        # Populate user details
+        for req in requests:
+            from_user = await self.db.users.find_one({"_id": req["from_user_id"]})
+            req["from_user"] = {
+                "id": str(from_user["_id"]),
+                "username": from_user["username"]
+            } if from_user else None
+        
+        return requests
+    
+    async def accept_friend_request(self, request_id: str, accept: bool) -> bool:
+        """Accept or reject friend request"""
+        request = await self.db.friend_requests.find_one({"_id": ObjectId(request_id)})
+        
+        if not request or request["status"] != "pending":
+            return False
+        
+        if accept:
+            # Create friendship
+            await self.db.friends.insert_one({
+                "user1_id": request["from_user_id"],
+                "user2_id": request["to_user_id"],
+                "created_at": datetime.utcnow()
+            })
+            
+            # Update request status
+            await self.db.friend_requests.update_one(
+                {"_id": ObjectId(request_id)},
+                {"$set": {"status": "accepted", "updated_at": datetime.utcnow()}}
+            )
+        else:
+            await self.db.friend_requests.update_one(
+                {"_id": ObjectId(request_id)},
+                {"$set": {"status": "rejected", "updated_at": datetime.utcnow()}}
+            )
+        
+        return True
+    
+    async def get_friends(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get user's friends list"""
+        user_id_obj = ObjectId(user_id)
+        
+        cursor = self.db.friends.find({
+            "$or": [
+                {"user1_id": user_id_obj},
+                {"user2_id": user_id_obj}
+            ]
+        })
+        
+        friendships = await cursor.to_list(length=None)
+        friends = []
+        
+        for friendship in friendships:
+            # Get the other user's ID
+            friend_id = friendship["user2_id"] if friendship["user1_id"] == user_id_obj else friendship["user1_id"]
+            
+            # Get user details
+            friend = await self.db.users.find_one({"_id": friend_id})
+            if friend:
+                friends.append({
+                    "_id": str(friend["_id"]),
+                    "username": friend["username"],
+                    "is_online": False,  # Will be updated by Socket.io
+                    "in_session": False  # Will be updated by checking active sessions
+                })
+        
+        return friends
+    
+    async def remove_friend(self, user_id: str, friend_id: str) -> bool:
+        """Remove friend"""
+        result = await self.db.friends.delete_one({
+            "$or": [
+                {"user1_id": ObjectId(user_id), "user2_id": ObjectId(friend_id)},
+                {"user1_id": ObjectId(friend_id), "user2_id": ObjectId(user_id)}
+            ]
+        })
+        return result.deleted_count > 0
+    
+    # STUDY SESSION OPERATIONS (NEW)
+    
+    async def create_study_session(
+        self, 
+        host_id: str, 
+        course: str, 
+        session_name: str,
+        invited_friends: List[str]
+    ) -> Dict[str, Any]:
+        """Create study session"""
+        session = {
+            "session_name": session_name,
+            "course": course,
+            "host_id": ObjectId(host_id),
+            "status": "active",
+            "participants": [{
+                "user_id": ObjectId(host_id),
+                "role": "host",
+                "joined_at": datetime.utcnow(),
+                "is_active": True
+            }],
+            "invited_users": [ObjectId(uid) for uid in invited_friends],
+            "current_topic": None,
+            "created_at": datetime.utcnow(),
+            "ended_at": None
+        }
+        
+        result = await self.db.study_sessions.insert_one(session)
+        session["_id"] = result.inserted_id
+        
+        # Create invitations
+        for friend_id in invited_friends:
+            await self.db.session_invitations.insert_one({
+                "session_id": result.inserted_id,
+                "from_user_id": ObjectId(host_id),
+                "to_user_id": ObjectId(friend_id),
+                "status": "pending",
+                "created_at": datetime.utcnow()
+            })
+        
+        return session
+    
+    async def get_session_invitations(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get pending session invitations"""
+        cursor = self.db.session_invitations.find({
+            "to_user_id": ObjectId(user_id),
+            "status": "pending"
+        }).sort("created_at", -1)
+        
+        invitations = await cursor.to_list(length=None)
+        
+        # Populate details
+        for inv in invitations:
+            session = await self.db.study_sessions.find_one({"_id": inv["session_id"]})
+            from_user = await self.db.users.find_one({"_id": inv["from_user_id"]})
+            
+            inv["session_name"] = session.get("session_name") if session else "Unknown"
+            inv["course"] = session.get("course") if session else "Unknown"
+            inv["from_user"] = {
+                "id": str(from_user["_id"]),
+                "username": from_user["username"]
+            } if from_user else None
+        
+        return invitations
+    
+    async def join_study_session(self, session_id: str, user_id: str) -> Dict[str, Any]:
+        """Join study session"""
+        session = await self.db.study_sessions.find_one({"_id": ObjectId(session_id)})
+        
+        if not session or session["status"] != "active":
+            raise ValueError("Session not available")
+        
+        # Check participant limit
+        active_participants = len([p for p in session["participants"] if p["is_active"]])
+        if active_participants >= 15:
+            raise ValueError("Session is full")
+        
+        # Check if already in session
+        user_id_obj = ObjectId(user_id)
+        existing_participant = next((p for p in session["participants"] if p["user_id"] == user_id_obj), None)
+        
+        if existing_participant:
+            # Rejoin - mark as active
+            await self.db.study_sessions.update_one(
+                {"_id": ObjectId(session_id), "participants.user_id": user_id_obj},
+                {"$set": {"participants.$.is_active": True}}
+            )
+        else:
+            # Add new participant
+            await self.db.study_sessions.update_one(
+                {"_id": ObjectId(session_id)},
+                {"$push": {
+                    "participants": {
+                        "user_id": user_id_obj,
+                        "role": "participant",
+                        "joined_at": datetime.utcnow(),
+                        "is_active": True
+                    }
+                }}
+            )
+        
+        # Update invitation status
+        await self.db.session_invitations.update_one(
+            {"session_id": ObjectId(session_id), "to_user_id": user_id_obj},
+            {"$set": {"status": "accepted"}}
+        )
+        
+        return await self.get_study_session(session_id)
+    
+    async def leave_study_session(self, session_id: str, user_id: str) -> Dict[str, Any]:
+        """Leave study session"""
+        session = await self.db.study_sessions.find_one({"_id": ObjectId(session_id)})
+        
+        if not session:
+            raise ValueError("Session not found")
+        
+        user_id_obj = ObjectId(user_id)
+        
+        # Mark participant as inactive
+        await self.db.study_sessions.update_one(
+            {"_id": ObjectId(session_id), "participants.user_id": user_id_obj},
+            {"$set": {"participants.$.is_active": False}}
+        )
+        
+        # If host left, transfer to another active participant
+        if session["host_id"] == user_id_obj:
+            active_participants = [
+                p for p in session["participants"] 
+                if p["is_active"] and p["user_id"] != user_id_obj
+            ]
+            
+            if active_participants:
+                new_host = active_participants[0]["user_id"]
+                await self.db.study_sessions.update_one(
+                    {"_id": ObjectId(session_id)},
+                    {"$set": {"host_id": new_host}}
+                )
+                
+                # Update new host's role
+                await self.db.study_sessions.update_one(
+                    {"_id": ObjectId(session_id), "participants.user_id": new_host},
+                    {"$set": {"participants.$.role": "host"}}
+                )
+            else:
+                # No active participants, end session
+                await self.db.study_sessions.update_one(
+                    {"_id": ObjectId(session_id)},
+                    {"$set": {"status": "ended", "ended_at": datetime.utcnow()}}
+                )
+        
+        return await self.get_study_session(session_id)
+    
+    async def get_study_session(self, session_id: str) -> Dict[str, Any]:
+        """Get study session details"""
+        session = await self.db.study_sessions.find_one({"_id": ObjectId(session_id)})
+        
+        if not session:
+            return None
+        
+        # Populate participant usernames
+        for participant in session["participants"]:
+            user = await self.db.users.find_one({"_id": participant["user_id"]})
+            participant["username"] = user["username"] if user else "Unknown"
+        
+        return session
+    
+    async def get_user_active_sessions(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get user's active sessions"""
+        user_id_obj = ObjectId(user_id)
+        
+        cursor = self.db.study_sessions.find({
+            "status": "active",
+            "participants.user_id": user_id_obj,
+            "participants.is_active": True
+        })
+        
+        return await cursor.to_list(length=None)
+    
+    async def update_session_content(
+        self, 
+        session_id: str, 
+        lesson_id: str, 
+        topic_id: str,
+        scroll_position: int = 0
+    ) -> bool:
+        """Update session's current topic"""
+        result = await self.db.study_sessions.update_one(
+            {"_id": ObjectId(session_id)},
+            {"$set": {
+                "current_topic": {
+                    "lesson_id": lesson_id,
+                    "topic_id": topic_id,
+                    "scroll_position": scroll_position,
+                    "updated_at": datetime.utcnow()
+                }
+            }}
+        )
+        return result.modified_count > 0
+    
+    async def save_session_message(
+        self, 
+        session_id: str, 
+        user_id: str, 
+        username: str,
+        message: str
+    ) -> Dict[str, Any]:
+        """Save session chat message"""
+        msg = {
+            "session_id": ObjectId(session_id),
+            "user_id": ObjectId(user_id),
+            "username": username,
+            "message": message,
+            "timestamp": datetime.utcnow()
+        }
+        
+        result = await self.db.session_messages.insert_one(msg)
+        msg["_id"] = result.inserted_id
+        return msg
+    
+    async def get_session_messages(self, session_id: str, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get session chat messages"""
+        cursor = self.db.session_messages.find(
+            {"session_id": ObjectId(session_id)}
+        ).sort("timestamp", -1).limit(limit)
+        
+        messages = await cursor.to_list(length=limit)
+        messages.reverse()  # Oldest first
+        return messages
 
 # Global database instance
 db = Database()

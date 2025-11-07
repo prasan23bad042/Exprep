@@ -5,12 +5,14 @@ import { Course, mockCourses } from '@/types/course';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { LogOut, MessageSquare, Star } from 'lucide-react';
+import { LogOut, MessageSquare, Star, Users, Video } from 'lucide-react';
+import CreateSessionDialog from '@/components/CreateSessionDialog';
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'schooling' | 'engineering' | 'govt'>('all');
+  const [showCreateSession, setShowCreateSession] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -31,6 +33,10 @@ export default function Home() {
     setLocation('/chat');
   };
 
+  const handleSessionCreated = (sessionId: string) => {
+    setLocation(`/study-room/${sessionId}`);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
@@ -40,6 +46,31 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-2">
           <Button 
+            variant="outline"
+            onClick={() => setLocation('/friends')}
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Friends
+          </Button>
+          
+          <Button 
+            variant="default"
+            onClick={() => setShowCreateSession(true)}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+          >
+            <Video className="h-4 w-4 mr-2" />
+            Start Study Session
+          </Button>
+          
+          <Button 
+            onClick={handleStartChatting}
+            className="gap-2"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Chat
+          </Button>
+          
+          <Button 
             variant="outline" 
             size="icon" 
             onClick={handleLogout}
@@ -47,13 +78,6 @@ export default function Home() {
             className="text-muted-foreground hover:text-foreground"
           >
             <LogOut className="h-4 w-4" />
-          </Button>
-          <Button 
-            onClick={handleStartChatting}
-            className="gap-2"
-          >
-            <MessageSquare className="h-4 w-4" />
-            Start Chatting
           </Button>
         </div>
       </div>
@@ -89,6 +113,13 @@ export default function Home() {
           </div>
         )}
       </Tabs>
+
+      {/* Create Session Dialog */}
+      <CreateSessionDialog
+        open={showCreateSession}
+        onOpenChange={setShowCreateSession}
+        onSessionCreated={handleSessionCreated}
+      />
     </div>
   );
 }

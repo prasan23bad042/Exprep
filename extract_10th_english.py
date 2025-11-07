@@ -1,0 +1,109 @@
+"""
+Script to extract 10th English content and separate Prose, Poem, and Supplementary
+"""
+
+import json
+import re
+from html import escape
+
+def text_to_html(text):
+    """Convert plain text to HTML with proper formatting"""
+    lines = text.split('\n')
+    html_parts = []
+    in_list = False
+    
+    for line in lines:
+        line = line.strip()
+        
+        if not line or line == '--------------------------------------':
+            if in_list:
+                html_parts.append('</ul>\n')
+                in_list = False
+            continue
+        
+        # Check if it's a heading
+        if line.isupper() or line.startswith('UNIT') or line.startswith('Unit'):
+            if in_list:
+                html_parts.append('</ul>\n')
+                in_list = False
+            html_parts.append(f'<h2 class="font-bold text-xl mt-4 mb-2">{escape(line)}</h2>\n')
+        
+        # Check if it's a subheading
+        elif line.endswith(':') and len(line) < 100:
+            if in_list:
+                html_parts.append('</ul>\n')
+                in_list = False
+            html_parts.append(f'<h3 class="font-semibold text-lg mt-3 mb-2">{escape(line)}</h3>\n')
+        
+        # Check if it's a list item
+        elif re.match(r'^[\-•*]\s+', line) or re.match(r'^\d+\.\s+', line):
+            if not in_list:
+                html_parts.append('<ul class="list-disc list-inside ml-4 mb-2">\n')
+                in_list = True
+            clean_line = re.sub(r'^[\-•*]\s+', '', line)
+            clean_line = re.sub(r'^\d+\.\s+', '', clean_line)
+            html_parts.append(f'  <li class="mb-1">{escape(clean_line)}</li>\n')
+        
+        # Regular paragraph
+        else:
+            if in_list:
+                html_parts.append('</ul>\n')
+                in_list = False
+            
+            # Format bold and italic text
+            formatted_line = escape(line)
+            formatted_line = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', formatted_line)
+            formatted_line = re.sub(r'__(.*?)__', r'<strong>\1</strong>', formatted_line)
+            formatted_line = re.sub(r'\*(.*?)\*', r'<em>\1</em>', formatted_line)
+            formatted_line = re.sub(r'_(.*?)_', r'<em>\1</em>', formatted_line)
+            
+            html_parts.append(f'<p class="mb-3">{formatted_line}</p>\n')
+    
+    if in_list:
+        html_parts.append('</ul>\n')
+    
+    return ''.join(html_parts)
+
+def split_unit_content(content):
+    """Split unit content into prose, poem, and supplementary sections"""
+    sections = {'prose': '', 'poem': '', 'supplementary': ''}
+    
+    # Split by section headers
+    prose_match = re.search(r'PROSE\s*-{10,}(.*?)(?=POEM\s*-{10,}|$)', content, re.DOTALL | re.IGNORECASE)
+    poem_match = re.search(r'POEM\s*-{10,}(.*?)(?=SUPPLEMENTARY|$)', content, re.DOTALL | re.IGNORECASE)
+    supp_match = re.search(r'SUPPLEMENTARY.*?-{10,}(.*?)$', content, re.DOTALL | re.IGNORECASE)
+    
+    if prose_match:
+        sections['prose'] = text_to_html(prose_match.group(1).strip())
+    if poem_match:
+        sections['poem'] = text_to_html(poem_match.group(1).strip())
+    if supp_match:
+        sections['supplementary'] = text_to_html(supp_match.group(1).strip())
+    
+    return sections
+
+# Process all units
+all_units_data = {}
+
+for i in range(1, 8):
+    unit_file = f'd:/Exprep/10th English/10th english unit -{i} SUMMARY.txt'
+    
+    try:
+        print(f'Processing Unit {i}...')
+        with open(unit_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        sections = split_unit_content(content)
+        all_units_data[f'unit-{i}'] = sections
+        print(f'  - Prose: {len(sections["prose"])} chars')
+        print(f'  - Poem: {len(sections["poem"])} chars')
+        print(f'  - Supplementary: {len(sections["supplementary"])} chars')
+        print(f'Unit {i} processed successfully!\n')
+    except Exception as e:
+        print(f'Error processing Unit {i}: {str(e)}')
+
+# Save to JSON file
+with open('d:/Exprep/english10_units_separated.json', 'w', encoding='utf-8') as f:
+    json.dump(all_units_data, f, ensure_ascii=False, indent=2)
+
+print('✅ All units processed! Content saved to english10_units_separated.json')

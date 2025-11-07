@@ -47,9 +47,30 @@ SYSTEM_PROMPTS = {
 
 # Level adjustments
 LEVEL_ADJUSTMENTS = {
-    LevelType.BEGINNER: "Use simple explanations. Avoid jargon. Provide step-by-step guidance with examples.",
-    LevelType.INTERMEDIATE: "Balance theory and practice. Introduce advanced concepts gradually. Assume basic knowledge.",
-    LevelType.EXPERT: "Provide in-depth analysis. Include edge cases and advanced topics. Challenge with complex scenarios."
+    LevelType.BEGINNER: """Use simple, easy-to-understand language. Avoid technical jargon.
+- Provide real-world analogies and relatable examples (like comparing concepts to everyday situations)
+- Break down concepts step-by-step
+- Use storytelling or scenarios to make concepts memorable
+- Include practical examples that beginners can relate to
+- Format your response with clear headings, bullet points, and numbered steps
+- Add a "Key Takeaway" section at the end""",
+    
+    LevelType.INTERMEDIATE: """Provide crisp, focused explanations with moderate depth.
+- Assume basic knowledge of fundamentals
+- Cover a few additional advanced topics beyond the basics
+- Balance theory with practical applications
+- Include code examples or technical details where relevant
+- Use proper technical terminology but explain complex terms
+- Format with clear sections: Overview, Key Concepts, Advanced Topics, Summary
+- Mention edge cases and common pitfalls""",
+    
+    LevelType.EXPERT: """Deliver concise, in-depth technical analysis.
+- Cover advanced topics, optimization techniques, and architectural considerations
+- Discuss edge cases, performance implications, and trade-offs
+- Reference research papers, advanced algorithms, or system internals where relevant
+- Include complex scenarios and real-world production considerations
+- Format with: Technical Overview, Deep Dive, Advanced Concepts, Performance & Trade-offs
+- Challenge with thought-provoking questions or scenarios"""
 }
 
 async def generate_embedding(text: str) -> List[float]:
@@ -88,6 +109,15 @@ async def generate_response(query: str, context: str, course: CourseType, level:
     system_prompt = f"""{base_prompt}
 
 Level: {level.value}. {level_adjustment}
+
+IMPORTANT FORMATTING INSTRUCTIONS:
+- Use proper Markdown formatting in your response
+- Use headings (##, ###) to structure your answer
+- Use **bold** for key terms and important points
+- Use bullet points (-) and numbered lists (1., 2., 3.) for clarity
+- Use code blocks (```) for code examples
+- Use > for important notes or tips
+- Keep paragraphs concise and well-spaced
 
 Context from course materials:
 {context}

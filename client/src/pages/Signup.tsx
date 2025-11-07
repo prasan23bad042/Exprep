@@ -57,8 +57,8 @@ export default function Signup() {
     setIsLoading(true);
 
     try {
-      const response = await apiClient.post('/auth/register', { username, password });
-      login(response.data.token);
+      const response = await apiClient.register(username, password);
+      login(response.user, response.accessToken);
       
       toast({
         title: 'Success',
@@ -66,8 +66,8 @@ export default function Signup() {
       });
       
       setLocation('/');
-    } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Failed to create account';
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to create account';
       toast({
         title: 'Registration Failed',
         description: errorMessage,

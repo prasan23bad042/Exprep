@@ -25,3 +25,10 @@ pydantic-settings==2.1.0
 # Utilities
 python-dotenv==1.0.0
 numpy==1.26.3
+
+# Real-time Communication (NEW)
+python-socketio==5.11.0
+aiohttp==3.9.1
+
+# SSL certificates
+certifi==2024.2.2

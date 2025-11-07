@@ -1,6 +1,8 @@
 """
 Test script to verify camelCase support in Pydantic models
 """
+import numpy 
+import matplotlib
 import json
 from models import RAGQueryRequest, RAGQueryResponse, SourceCitation
 

@@ -31,10 +31,41 @@ export default function OsTopicPage() {
   const unit = osUnits.find(u => u.id === lessonId);
   const topic = unit?.topics.find(t => t.id === topicId);
   const topicIndex = unit?.topics.findIndex(t => t.id === topicId) ?? -1;
+  const unitIndex = osUnits.findIndex(u => u.id === lessonId);
   
-  // Get previous and next topics for navigation
-  const previousTopic = topicIndex > 0 ? unit?.topics[topicIndex - 1] : null;
-  const nextTopic = topicIndex < (unit?.topics.length ?? 0) - 1 ? unit?.topics[topicIndex + 1] : null;
+  // Get previous and next topics for navigation (with cross-unit support)
+  let previousTopic = null;
+  let previousUnitId = lessonId;
+  let nextTopic = null;
+  let nextUnitId = lessonId;
+  
+  if (unit && topicIndex >= 0) {
+    if (topicIndex > 0) {
+      // Previous topic in same unit
+      previousTopic = unit.topics[topicIndex - 1];
+      previousUnitId = unit.id;
+    } else if (unitIndex > 0) {
+      // First topic of current unit, go to last topic of previous unit
+      const prevUnit = osUnits[unitIndex - 1];
+      if (prevUnit && prevUnit.topics.length > 0) {
+        previousTopic = prevUnit.topics[prevUnit.topics.length - 1];
+        previousUnitId = prevUnit.id;
+      }
+    }
+    
+    if (topicIndex < unit.topics.length - 1) {
+      // Next topic in same unit
+      nextTopic = unit.topics[topicIndex + 1];
+      nextUnitId = unit.id;
+    } else if (unitIndex < osUnits.length - 1) {
+      // Last topic of current unit, go to first topic of next unit
+      const nextUnit = osUnits[unitIndex + 1];
+      if (nextUnit && nextUnit.topics.length > 0) {
+        nextTopic = nextUnit.topics[0];
+        nextUnitId = nextUnit.id;
+      }
+    }
+  }
 
   if (!topic) {
     return (
@@ -110,7 +141,7 @@ This is a summary of ${topic.title}.`;
               <div className="mt-8 pt-4 border-t flex justify-between">
                 {previousTopic ? (
                   <Button asChild variant="outline">
-                    <Link href={`/operating-systems/lessons/${lessonId}/${previousTopic.id}`}>
+                    <Link href={`/operating-systems/lessons/${previousUnitId}/${previousTopic.id}`}>
                       <ChevronLeft className="mr-2 h-4 w-4" />
                       {previousTopic.title}
                     </Link>
@@ -119,7 +150,7 @@ This is a summary of ${topic.title}.`;
                 
                 {nextTopic ? (
                   <Button asChild>
-                    <Link href={`/operating-systems/lessons/${lessonId}/${nextTopic.id}`}>
+                    <Link href={`/operating-systems/lessons/${nextUnitId}/${nextTopic.id}`}>
                       {nextTopic.title}
                       <ChevronRight className="ml-2 h-4 w-4" />
                     </Link>

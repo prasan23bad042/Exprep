@@ -49,16 +49,13 @@ export default function Login() {
 
     try {
       console.log("Making API call to /auth/login");
-      const response = await apiClient.post("/auth/login", {
-        username,
-        password,
-      });
+      const response = await apiClient.login(username, password);
 
       console.log("API response:", response);
 
       if (response && response.accessToken) {
         console.log("Login successful, token received");
-        login(response.accessToken);
+        login(response.user, response.accessToken);
 
         toast({
           title: "Success",
@@ -70,11 +67,11 @@ export default function Login() {
         console.error("No access token in response:", response);
         throw new Error("No authentication token received");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
       toast({
         title: "Login Failed",
-        description: "Invalid username or password",
+        description: error.message || "Invalid username or password",
         variant: "destructive",
       });
     } finally {

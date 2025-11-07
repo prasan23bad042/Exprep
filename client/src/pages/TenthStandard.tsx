@@ -1,11 +1,12 @@
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Book, Globe, Calculator, FlaskConical } from "lucide-react";
 
 type Subject = {
   id: string;
   name: string;
   description: string;
+  icon: React.ReactNode;
 };
 
 export default function TenthStandard() {
@@ -15,22 +16,26 @@ export default function TenthStandard() {
     {
       id: "mathematics",
       name: "Mathematics",
-      description: "Advanced Algebra, Geometry, and Trigonometry",
-    },
-    {
-      id: "science",
-      name: "Science",
-      description: "Physics, Chemistry, and Biology for 10th grade",
-    },
-    {
-      id: "social-science",
-      name: "Social Science",
-      description: "Indian History, Geography, and Political Science",
+      description: "Algebra, Geometry, Trigonometry, and Statistics",
+      icon: <Calculator className="h-8 w-8 text-blue-600" />,
     },
     {
       id: "english",
       name: "English",
-      description: "Language and Literature with focus on board exams",
+      description: "Prose, Poetry, and Supplementary Reader",
+      icon: <Book className="h-8 w-8 text-purple-600" />,
+    },
+    {
+      id: "social",
+      name: "Social Science",
+      description: "History, Geography, Civics, and Economics",
+      icon: <Globe className="h-8 w-8 text-orange-600" />,
+    },
+    {
+      id: "science",
+      name: "Science",
+      description: "Physics, Chemistry, and Biology",
+      icon: <FlaskConical className="h-8 w-8 text-green-600" />,
     },
   ];
 
@@ -46,14 +51,19 @@ export default function TenthStandard() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
         {subjects.map((subject) => (
-          <div
-            key={subject.id}
-            className="border rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => setLocation(`/course/tn-board/10th/${subject.id}`)}
-          >
-            <h3 className="text-xl font-semibold mb-2">{subject.name}</h3>
-            <p className="text-muted-foreground">{subject.description}</p>
-          </div>
+          <Link key={subject.id} href={`/tenth-standard/${subject.id}`}>
+            <div className="border rounded-lg p-6 hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-start space-x-4">
+                <div className="p-2 bg-muted rounded-lg">
+                  {subject.icon}
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">{subject.name}</h3>
+                  <p className="text-muted-foreground">{subject.description}</p>
+                </div>
+              </div>
+            </div>
+          </Link>
         ))}
       </div>
     </div>
